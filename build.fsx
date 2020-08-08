@@ -76,13 +76,31 @@ Target.create "Publish" (fun _ ->
 )
 
 Target.create "GetSize" (fun _ ->
-  IO.DirectoryInfo("publish").GetDirectories()
-  |> Seq.map(fun info ->
-    let size = getDirectorySize info
-    size, (sprintf "%s:\t%d" info.Name size)
-  )
-  |> Seq.sortBy fst
-  |> Seq.iter (snd >> printfn "%s")
+  let res =
+    seq {
+      for p in !! "src/**/*.*proj" do
+        let projName = IO.Path.GetFileNameWithoutExtension p
+        for runtime in runtimes do
+          let info = IO.DirectoryInfo(sprintf @"publish/%s.%s" projName runtime)
+          let size = getDirectorySize info
+          yield projName, runtime, size
+    }
+    |> Seq.toArray
+
+  res
+  |> Seq.map(fun (n, r, s) -> sprintf "%s.%s:\t%d" n r s)
+  |> String.concat "\n"
+  |> Trace.trace
+
+  res
+  |> Seq.map(fun (n, r, s) -> sprintf "| %s | %s | %d |" n r s)
+  |> String.concat "\n"
+  |> sprintf """| Project | Runtime | Size |
+| ---- | ---- | ---- |
+%s
+"""
+  |> fun s ->
+    IO.File.WriteAllText(@"size.md", s)
 )
 
 open System.Net.Http
