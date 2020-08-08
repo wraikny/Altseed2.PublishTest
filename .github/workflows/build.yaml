@@ -47,7 +47,6 @@ jobs:
     - name: Publish
       run: |
         dotnet fake build -t Publish
-        dotnet fake build -t GetSize
       env:
         CI: true
 
