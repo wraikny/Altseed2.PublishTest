@@ -4,12 +4,14 @@ nuget Fake.DotNet.Cli
 nuget Fake.IO.FileSystem
 nuget Fake.Core.Target
 nuget Fake.IO.Zip
+nuget Fake.Runtime
 nuget FSharp.Json //"
 #load ".fake/build.fsx/intellisense.fsx"
 #r "netstandard"
 open Fake.Core
 open Fake.DotNet
 open Fake.IO
+open Fake.Runtime
 open Fake.IO.FileSystemOperators
 open Fake.IO.Globbing.Operators
 open Fake.Core.TargetOperators
@@ -31,7 +33,6 @@ Target.initEnvironment ()
 Target.create "Clean" (fun _ ->
     !! "src/**/bin"
     ++ "src/**/obj"
-    ++ "publish/**"
     |> Shell.cleanDirs 
 )
 
@@ -42,37 +43,47 @@ Target.create "Build" (fun _ ->
 
 let runtimes = [ "linux-x64"; "win-x64"; "osx-x64" ]
 
-let notAsSingleFile = set [
-  "PublishDefault"
+let projects = [
+  "PublishDefault", false
+  "PublishSingleTrimmed", true
+  "PublishSingleTrimmedConditionalGitHub", true
+  "PublishSingleTrimmedExcludeNuget", true
 ]
 
-Target.create "Publish" (fun _ ->
-  !! "src/**/*.*proj"
-  |> Seq.iter(fun p ->
-    runtimes
-    |> Seq.iter(fun runtime ->
-      let projName = IO.Path.GetFileNameWithoutExtension p
+let projectsLocal = ("PublishSingleTrimmedNugetLocal", true) :: projects
 
-      p |> DotNet.publish(fun p ->
-        { p with
-            Runtime = Some runtime
-            Configuration = DotNet.BuildConfiguration.Release
-            SelfContained = Some true
-            OutputPath = Some (sprintf "publish/%s.%s" projName runtime)
-            MSBuildParams = {
-              p.MSBuildParams with
-                Properties =
-                  if notAsSingleFile.Contains projName then
-                    p.MSBuildParams.Properties
-                  else
-                    ("PublishSingleFile", "true")
-                    :: ("PublishTrimmed", "true")
-                    :: p.MSBuildParams.Properties
-            }
-        }
-      )
+let publish (projName, singleTrimmed) =
+  let p = sprintf @"src/%s/%s.csproj" projName projName
+
+  runtimes
+  |> Seq.iter(fun runtime ->
+    p |> DotNet.publish(fun p ->
+      { p with
+          Runtime = Some runtime
+          Configuration = DotNet.BuildConfiguration.Release
+          SelfContained = Some true
+          OutputPath = Some (sprintf "publish/%s.%s" projName runtime)
+          MSBuildParams = {
+            p.MSBuildParams with
+              Properties =
+                if singleTrimmed then
+                  ("PublishSingleFile", "true")
+                  :: ("PublishTrimmed", "true")
+                  :: p.MSBuildParams.Properties
+                else
+                  p.MSBuildParams.Properties
+          }
+      }
     )
   )
+
+Target.create "Publish" (fun _ ->
+  Directory.delete @"publish"
+
+  let isCI = (Environment.environVarOrDefault "CI" "false") = "true"
+
+  if isCI then projects else projectsLocal
+  |> Seq.iter publish
 )
 
 Target.create "GetSize" (fun _ ->
