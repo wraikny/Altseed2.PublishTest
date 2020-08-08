@@ -3,6 +3,7 @@
 ```sh
 $ dotnet tool restore
 $ dotnet fake build -t publish
+$ dotnet fake build -t getsize
 ```
 
 ## Dependencies
