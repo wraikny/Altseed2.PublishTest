@@ -85,6 +85,7 @@ Target.create "GetSize" (fun _ ->
           let size = getDirectorySize info
           yield projName, runtime, size
     }
+    |> Seq.sortBy (fun (_,_,x) -> x)
     |> Seq.toArray
 
   res
@@ -95,7 +96,10 @@ Target.create "GetSize" (fun _ ->
   res
   |> Seq.map(fun (n, r, s) -> sprintf "| %s | %s | %d |" n r s)
   |> String.concat "\n"
-  |> sprintf """| Project | Runtime | Size |
+  |> sprintf """# GetSize Result
+Sorted by size
+
+| Project | Runtime | Size |
 | ---- | ---- | ---- |
 %s
 """
