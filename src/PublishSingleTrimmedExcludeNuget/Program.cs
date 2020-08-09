@@ -5,6 +5,7 @@ namespace PublishSingleTrimmedExcludeNuget
 {
     class Program
     {
+        [STAThread]
         static void Main(string[] args)
         {
             Engine.Initialize("PublishSingleTrimmedExcludeNuget", 800, 600);

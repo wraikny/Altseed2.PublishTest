@@ -5,6 +5,7 @@ namespace PublishDefault
 {
     class Program
     {
+        [STAThread]
         static void Main(string[] args)
         {
             Engine.Initialize("PublishDefault", 800, 600);

@@ -5,6 +5,7 @@ namespace PublishSingleTrimmed
 {
     class Program
     {
+        [STAThread]
         static void Main(string[] args)
         {
             Engine.Initialize("PublishSingleTrimmed", 800, 600);
